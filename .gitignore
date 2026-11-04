@@ -30,3 +30,5 @@ Thumbs.db
 *.pkl
 *.csv
 *.parquet
+**/test-results/
+**/playwright-report/

@@ -1,8 +1,8 @@
 # FinGuard — Financial Transaction Anomaly Detection
 
 FinGuard combines a Java financial ledger with rules and a Python Isolation Forest service.
-**Milestone 3 adds hybrid anomaly detection, durable background processing, and analyst reviews.**
-All Milestone 1–2 APIs remain available. React development has not started.
+**Milestone 4 adds a responsive React monitoring dashboard integrated with the existing APIs.**
+All Milestone 1–3 functionality remains available. Deployment has not started.
 
 ## Monorepo
 
@@ -11,7 +11,7 @@ All Milestone 1–2 APIs remain available. React development has not started.
 | `backend/` | Java 21, Spring Boot, Spring Data JPA, Flyway, MySQL |
 | `database/` | Reviewed schema reference and synthetic sample data |
 | `docs/` | Design notes and importable Postman collection |
-| `frontend/` | Reserved for React, Vite, Recharts |
+| `frontend/` | React, Vite, Tailwind CSS, Recharts, Lucide icons and browser tests |
 | `ml-service/` | FastAPI, Pandas, NumPy, Scikit-learn, reproducible training and evaluation |
 
 ## Prerequisites and tests
@@ -301,3 +301,73 @@ large, duplicate, burst and baseline rules; ML HTTP errors/timeouts/invalid resp
 job rollback/retry; durable alerts and analyst reviews; and all prior ledger/health
 cases. Python tests cover reproducibility, chronological splits, historical-only
 features, serving parity, validation and unavailable/corrupt model behavior.
+
+## Milestone 4: React monitoring dashboard
+
+Start MySQL/Python/Spring Boot as above, then open another terminal:
+
+```powershell
+cd frontend
+npm ci
+Copy-Item .env.example .env.local
+npm run dev
+```
+
+Use Node 22.12+ (verified on 22.18). Open `http://127.0.0.1:5173`. On macOS/Linux
+use `cp .env.example .env.local`. The default public configuration is
+`VITE_API_BASE_URL=http://localhost:8080/api`; restart Vite after changing it.
+Never put database credentials, tokens or secrets in any `VITE_*` variable.
+
+The navy/white dashboard includes overview KPIs, Recharts trends/volume/risk charts,
+customer creation/details, account creation/balances, credit/debit posting, paginated
+and filtered transaction history, anomaly explanations and persisted analyst review
+history. Every production figure comes from Spring Boot. No browser connection to
+MySQL or Python is needed. ML outages retain the backend's existing rule-only fallback.
+
+The frontend uses existing routes only: customers, accounts by customer, paginated
+transactions by account, assessments/alerts, risk status and review history. Because
+there is no global aggregate endpoint, it loads complete API pages with bounded
+concurrency and computes a refreshable client snapshot. Dates use UTC; period
+filters are based on posting time. Monetary totals use lossless JSON parsing and
+`decimal.js`; chart scales are approximate visualizations. Gross volume means
+credits plus debits. Pending assessments are never counted as low-risk results.
+This approach suits a portfolio/local workspace; large datasets need future backend
+reporting endpoints. See [frontend architecture and setup](frontend/README.md).
+
+Backend CORS defaults to the exact origins `http://localhost:5173` and
+`http://127.0.0.1:5173`, without browser credentials or wildcards. Configure
+`FRONTEND_ALLOWED_ORIGINS` as comma-separated exact origins if needed. CORS does not
+replace authentication. Analyst names remain self-declared; no deployment or
+production identity/security work is included in this milestone.
+
+```powershell
+cd frontend
+npm test
+npm run build
+```
+
+The production build writes ignored `frontend/dist/`. Optional `npm run preview`
+uses port 4173; explicitly allow `http://127.0.0.1:4173` in backend CORS for that
+local verification. No deployment is performed. Full-stack Playwright checks are
+opt-in and write synthetic records; follow the isolated-database instructions in
+[frontend/README.md](frontend/README.md) before running `npm run test:e2e`.
+
+Validation completed for this milestone: 25 frontend unit/integration tests,
+4 full-stack browser tests, 51 Java tests on both H2 and disposable MySQL, and
+20 Python tests. Browser checks exercise actual CORS and APIs, customer/account
+creation, credit/debit posting, insufficient-funds rejection, persisted analyst
+review after reload, loading/error recovery, keyboard focus, and mobile layout.
+No private customer data was used in browser testing or screenshots.
+
+Desktop overview, captured from a disposable synthetic-data database:
+
+![FinGuard desktop overview with synthetic data](docs/screenshots/overview-desktop.png)
+
+Analyst investigation with stored evidence and an appended synthetic review:
+
+![FinGuard analyst investigation with synthetic data](docs/screenshots/investigation.png)
+
+[View the mobile overview screenshot](docs/screenshots/overview-mobile.png).
+The screenshots are illustrative synthetic snapshots; production screens contain
+no hardcoded demo data. Test logs, browser traces, generated models/datasets,
+credentials, dependencies and build artifacts stay out of Git.
