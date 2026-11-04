@@ -1,6 +1,25 @@
 spring:
   application:
     name: finguard-backend
+  jackson:
+    deserialization:
+      accept-float-as-int: false
+      fail-on-numbers-for-enums: true
+      fail-on-unknown-properties: true
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/finguard?connectionTimeZone=UTC}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
 server:
   port: ${SERVER_PORT:8080}
   error:

@@ -10,6 +10,10 @@
 !.env.example
 *.log
 *.sql
+# Only reviewed schema migrations and synthetic SQL fixtures are tracked.
+!backend/src/main/resources/db/migration/*.sql
+!database/schema.sql
+!database/sample-data.sql
 *.dump
 *.pem
 *.key

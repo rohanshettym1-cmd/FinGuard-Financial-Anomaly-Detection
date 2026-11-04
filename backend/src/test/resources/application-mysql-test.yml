@@ -1,0 +1,7 @@
+# Explicit opt-in: use only an empty, disposable database, never your normal DB_URL.
+spring:
+  datasource:
+    url: ${TEST_DB_URL}
+    username: ${TEST_DB_USERNAME}
+    password: ${TEST_DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
