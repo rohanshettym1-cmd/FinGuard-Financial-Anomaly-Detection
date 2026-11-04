@@ -2,6 +2,8 @@ package com.finguard.transaction;
 
 import com.finguard.account.AccountRepository;
 import com.finguard.common.ApiException;
+import com.finguard.anomaly.DetectionJob;
+import com.finguard.anomaly.DetectionJobRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
@@ -13,10 +15,12 @@ import static com.finguard.transaction.TransactionDtos.*;
 public class TransactionService {
     private final AccountRepository accounts;
     private final TransactionRepository transactions;
+    private final DetectionJobRepository jobs;
 
-    public TransactionService(AccountRepository accounts, TransactionRepository transactions) {
+    public TransactionService(AccountRepository accounts, TransactionRepository transactions, DetectionJobRepository jobs) {
         this.accounts = accounts;
         this.transactions = transactions;
+        this.jobs = jobs;
     }
 
     @Transactional
@@ -27,7 +31,10 @@ public class TransactionService {
         // JPA dirty checking persists the locked account's new balance.
         // The insert and balance update share one transaction: either both succeed or neither does.
         var transaction = new Transaction(account, request.type(), request.amount(), request.description());
-        return TransactionResponse.from(transactions.saveAndFlush(transaction));
+        transactions.saveAndFlush(transaction);
+        // Durable queue only: no analytics or network calls inside the balance transaction.
+        jobs.save(new DetectionJob(transaction.getId()));
+        return TransactionResponse.from(transaction);
     }
 
     public TransactionResponse get(long id) {

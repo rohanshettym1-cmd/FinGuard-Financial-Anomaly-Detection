@@ -1,0 +1,44 @@
+{
+  "seed": 42,
+  "rows": 5701,
+  "train_rows": 4275,
+  "test_rows": 1426,
+  "train_end_exclusive_utc": "2026-03-09 16:59:47+00:00",
+  "test_positive_labels": 146,
+  "data_sha256": "50172d02871cee766c574f4fda712032c453be7d8d5b0499a843137c16c1e3a6",
+  "model_version": "iforest-finguard-causal-v1-seed42-50172d02871c",
+  "sklearn_version": "1.9.1",
+  "contamination": 0.05,
+  "threshold_source": "training only; no test-label tuning",
+  "isolation_forest": {
+    "precision": 0.8767123287671232,
+    "recall": 0.4383561643835616,
+    "f1": 0.5844748858447488,
+    "false_positive_rate": 0.00703125,
+    "tp": 64,
+    "fp": 9,
+    "tn": 1271,
+    "fn": 82
+  },
+  "rules": {
+    "precision": 1.0,
+    "recall": 0.6712328767123288,
+    "f1": 0.8032786885245902,
+    "false_positive_rate": 0.0,
+    "tp": 98,
+    "fp": 0,
+    "tn": 1280,
+    "fn": 48
+  },
+  "hybrid": {
+    "precision": 0.9174311926605505,
+    "recall": 0.684931506849315,
+    "f1": 0.7843137254901961,
+    "false_positive_rate": 0.00703125,
+    "tp": 100,
+    "fp": 9,
+    "tn": 1271,
+    "fn": 46
+  },
+  "limitations": "Synthetic injection labels are not real fraud. Fixed generator patterns and prevalence do not represent production. Baselines update causally from earlier test events as online history; model weights and threshold remain frozen. Scores are priorities, not fraud probabilities."
+}

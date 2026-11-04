@@ -1,8 +1,8 @@
 # FinGuard — Financial Transaction Anomaly Detection
 
-FinGuard is a Java API with planned Python anomaly detection and React visualization.
-**Milestone 2 implements MySQL persistence and customer, account, and transaction APIs.**
-The Milestone 1 `/api/health` endpoint remains available. ML and React are not implemented yet.
+FinGuard combines a Java financial ledger with rules and a Python Isolation Forest service.
+**Milestone 3 adds hybrid anomaly detection, durable background processing, and analyst reviews.**
+All Milestone 1–2 APIs remain available. React development has not started.
 
 ## Monorepo
 
@@ -12,7 +12,7 @@ The Milestone 1 `/api/health` endpoint remains available. ML and React are not i
 | `database/` | Reviewed schema reference and synthetic sample data |
 | `docs/` | Design notes and importable Postman collection |
 | `frontend/` | Reserved for React, Vite, Recharts |
-| `ml-service/` | Reserved for FastAPI, Pandas, Scikit-learn |
+| `ml-service/` | FastAPI, Pandas, NumPy, Scikit-learn, reproducible training and evaluation |
 
 ## Prerequisites and tests
 
@@ -59,9 +59,10 @@ GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES
     ON finguard.* TO 'finguard_app'@'localhost';
 ```
 
-Startup runs Flyway's `V1__create_financial_schema.sql` and validates the JPA mappings.
-Do not manually execute `database/schema.sql` before starting: it is a readable copy
-of V1, and doing so would conflict with Flyway's history. For later schema changes,
+Startup runs Flyway's V1 and V2 migrations and validates the JPA mappings. Existing
+Milestone 2 databases receive V2 without editing V1 or changing balances. V2 queues
+existing transactions for detection. Do not manually execute `database/schema.sql`
+before starting: it mirrors V1+V2 and would conflict with Flyway's history. For later schema changes,
 add a new migration; do not modify an applied one. DDL privileges are for local
 migration development; production can use a separate migration identity.
 
@@ -191,3 +192,112 @@ For each approved milestone: build → test → review diff/secrets → commit �
 credentials, `.env` files, dumps, or build outputs. Only reviewed migrations and
 the named synthetic SQL fixtures are exceptions to the SQL ignore rule. Start the
 next milestone only after approval.
+
+## Milestone 3: hybrid anomaly detection
+
+Train and start the Python service in a second terminal (verified with Python 3.14):
+
+```powershell
+cd ml-service
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m analytics.train --seed 42 --output artifacts
+.\.venv\Scripts\python.exe -m uvicorn analytics.app:app --host 127.0.0.1 --port 8000
+```
+
+On macOS/Linux use `.venv/bin/python`. Training generates ignored synthetic CSV,
+model and evaluation artifacts; no customer data is needed. `GET http://localhost:8000/health`
+returns 200 when ready (503 if the model is absent/incompatible). Set `MODEL_PATH`
+to override the default `artifacts/isolation_forest.joblib`. Load only trusted local
+joblib files; never load uploaded/untrusted serialized models.
+
+Start Java using the existing MySQL setup. V2 migrates existing databases and queues
+older transactions automatically. New postings commit balances, ledger entries and
+a pending detection job together. Background detection runs in a separate transaction;
+Python timeouts or outages never undo a valid posting. Assessments may appear a few
+seconds later; poll the risk endpoint rather than expecting them in the POST response.
+
+| Java environment variable | Default | Purpose |
+| --- | --- | --- |
+| `DETECTION_ENABLED` | `true` | Enable background queue processing |
+| `DETECTION_POLL_DELAY_MS` | `2000` | Delay between batches of up to 20 pending jobs |
+| `ML_ENABLED` | `true` | Enable Python inference; false uses rules only |
+| `ML_BASE_URL` | `http://localhost:8000` | Python service URL |
+| `ML_CONNECT_TIMEOUT_MS` | `300` | Connection timeout (1–10000 ms) |
+| `ML_REQUEST_TIMEOUT_MS` | `1000` | Overall HTTP request timeout (1–10000 ms) |
+
+Unreachable Python, HTTP failures, invalid responses and timeouts retain all rules
+and record `mlStatus=UNAVAILABLE`. `ML_ENABLED=false` records `DISABLED`. Rule-only
+assessments complete normally; they are not automatically re-scored after recovery.
+Database/worker failures leave jobs pending for retry. Failed or rolled-back ledger
+postings leave no detection job. Both H2/MySQL test profiles disable the scheduler
+and call detection explicitly, avoiding timing-dependent tests and external ML calls.
+
+| Method | Endpoint | Result |
+| --- | --- | --- |
+| GET | `/api/transactions/{id}/risk` | 202 PENDING until assessed; then 200 with scores/reasons |
+| GET | `/api/alerts?page=0&size=20&status=OPEN` | Flagged assessments, newest first; status optional |
+| GET | `/api/alerts?includeNormal=true` | Also include normal assessments |
+| GET | `/api/alerts/{id}` | Assessment features, scores, ML status, model version and reasons |
+| POST | `/api/alerts/{id}/reviews` | Append analyst review and update status (201) |
+| GET | `/api/alerts/{id}/reviews` | Chronological review audit trail |
+| GET | Python `/health` | Model readiness |
+| POST | Python `/predict` | Validated feature inference; 422 invalid input, 503 model unavailable |
+
+Reviewable statuses are OPEN, IN_REVIEW, CONFIRMED and FALSE_POSITIVE. Normal
+assessments use NOT_REQUIRED and cannot be reviewed. Alert pages are zero-based,
+size 1–100, page 0–1,000,000. Review notes and analyst are required, with maximum
+lengths 1000 and 100 respectively. These local-development APIs do not authenticate
+analysts or automatically block/reverse transactions.
+
+Example: post a valid credit of 15000.00 using the existing API, capture its ID,
+then GET `/api/transactions/{id}/risk`. The LARGE_AMOUNT rule contributes 45 points.
+Possible duplicates and rapid postings add explanations; historical customer debit
+baselines require at least 5 earlier debits. Review a flagged assessment in Postman:
+
+```http
+POST /api/alerts/1/reviews
+Content-Type: application/json
+```
+
+```json
+{"status":"IN_REVIEW","analyst":"Demo Analyst","notes":"Investigating synthetic activity"}
+```
+
+Python prediction example (raw JSON POST to `http://localhost:8000/predict`):
+
+```json
+{"amount":"15000.00","hour":2,"frequency_5m":6,"prior_debit_count":20,"baseline_mean":"300.00","is_debit":true}
+```
+
+Rule points add and cap at 100. An ML outlier contributes `max(40, mlScore)`;
+hybrid risk is the maximum of that contribution and the rule score. Scores at least
+40 are flagged. Python's score is a training-anomaly-score percentile, not a
+calibrated fraud probability. See [design and rule definitions](docs/anomaly-detection.md)
+for thresholds, historical cutoffs, clock features, cold starts and SQL concepts.
+
+Actual reproducible evaluation (seed 42): 5,701 synthetic events, chronological
+split of 4,275 training / 1,426 test events, including 146 labeled test injections.
+Labels never enter model fitting; thresholds and ranking reference use training
+only. Earlier test events update later baselines causally; model weights stay frozen.
+
+| Detector | Precision | Recall | F1 | False-positive rate |
+| --- | --- | --- | --- | --- |
+| Isolation Forest | 87.67% | 43.84% | 58.45% | 0.70% |
+| Rules | 100.00% | 67.12% | 80.33% | 0.00% |
+| Hybrid | 91.74% | 68.49% | 78.43% | 0.70% |
+
+The hybrid caught two more synthetic positives than rules but added nine false
+positives, reducing F1. Synthetic patterns intentionally resemble the rules and do
+not establish real fraud-detection performance. The data lacks real-world prevalence,
+drift and adjudicated fraud labels. The 0–100 scores prioritize investigation; they
+are not probabilities or proof of fraud. Exact confusion counts, model version,
+dataset hash and limitations are in [evaluation.json](docs/evaluation.json).
+
+Run Java `clean verify` using the existing H2 and opt-in disposable MySQL commands
+above, and run Python `python -m pytest -q` from `ml-service`. Java tests cover normal,
+large, duplicate, burst and baseline rules; ML HTTP errors/timeouts/invalid responses;
+job rollback/retry; durable alerts and analyst reviews; and all prior ledger/health
+cases. Python tests cover reproducibility, chronological splits, historical-only
+features, serving parity, validation and unavailable/corrupt model behavior.

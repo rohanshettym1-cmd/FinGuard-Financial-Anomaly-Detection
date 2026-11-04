@@ -16,4 +16,8 @@ INSERT INTO financial_transactions
     (3001, 2001, 'CREDIT', 1500.00, 1500.00, 'Synthetic opening credit', '2026-01-01 09:10:00'),
     (3002, 2001, 'DEBIT', 500.00, 1000.00, 'Synthetic purchase', '2026-01-01 09:15:00');
 
+INSERT INTO detection_jobs (transaction_id, completed, created_at) VALUES
+    (3001, FALSE, '2026-01-01 09:10:00'),
+    (3002, FALSE, '2026-01-01 09:15:00');
+
 COMMIT;

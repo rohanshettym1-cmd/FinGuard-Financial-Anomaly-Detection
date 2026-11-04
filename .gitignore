@@ -24,3 +24,9 @@
 *.iml
 .DS_Store
 Thumbs.db
+**/.pytest_cache/
+**/artifacts/
+*.joblib
+*.pkl
+*.csv
+*.parquet

@@ -25,3 +25,11 @@ server:
   error:
     include-message: never
     include-stacktrace: never
+detection:
+  enabled: ${DETECTION_ENABLED:true}
+  poll-delay-ms: ${DETECTION_POLL_DELAY_MS:2000}
+ml:
+  enabled: ${ML_ENABLED:true}
+  base-url: ${ML_BASE_URL:http://localhost:8000}
+  connect-timeout-ms: ${ML_CONNECT_TIMEOUT_MS:300}
+  request-timeout-ms: ${ML_REQUEST_TIMEOUT_MS:1000}
