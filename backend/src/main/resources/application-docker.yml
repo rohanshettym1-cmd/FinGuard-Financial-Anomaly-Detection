@@ -1,0 +1,9 @@
+# Compose mounts one password file as /run/secrets/db.password.
+spring:
+  config:
+    import: configtree:${DB_SECRETS_DIR:/run/secrets/}
+  datasource:
+    password: ${db.password}
+server:
+  shutdown: graceful
+  forward-headers-strategy: framework

@@ -23,3 +23,8 @@ Generated CSVs, models, virtual environments and local artifacts stay out of Git
 The small committed [evaluation summary](../docs/evaluation.json) contains only
 aggregate synthetic metrics and provenance. See [architecture](../docs/anomaly-detection.md)
 and the root README for Java integration, examples, limits and actual evaluation results.
+
+The Docker build uses `requirements-runtime.txt` for serving/training dependencies,
+runs the full tests in a separate verification stage, and trains a Linux-native model.
+It copies neither local serialized artifacts nor generated CSVs into the runtime.
+See the root README for Compose setup and its current verification limitation.

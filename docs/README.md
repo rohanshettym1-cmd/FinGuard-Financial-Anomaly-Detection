@@ -2,8 +2,9 @@
 
 Milestones 1–2 provide the health endpoint and MySQL-backed customer, account, and
 transaction APIs. Milestone 3 adds hybrid analytics and analyst reviews; see
-[anomaly-detection.md](anomaly-detection.md) for architecture and evaluation. Frontend
-implementation remains reserved for later approval.
+[anomaly-detection.md](anomaly-detection.md) for architecture and evaluation. Milestone 4
+adds the React dashboard; Milestone 5 packages the local stack and safe demo setup.
+See [the runbook](local-stack.md) and [interview notes](portfolio.md).
 
 ## Data model
 
@@ -41,7 +42,7 @@ and [Flyway MySQL support](https://documentation.red-gate.com/flyway/reference/d
 
 Flyway runs versioned migrations at startup; Hibernate only validates the result
 (`ddl-auto=validate`). Never edit an applied migration: add a new V2, V3, etc.
-`database/schema.sql` mirrors V1+V2 as a readable reference, not an additional startup
+`database/schema.sql` mirrors V1+V2+V3 as a readable reference, not an additional startup
 script. The synthetic seed is manual and is never applied to production automatically.
 SQL dumps remain ignored; only named reference/fixture files and migration SQL are
 allowed by Git configuration.

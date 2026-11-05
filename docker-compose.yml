@@ -1,0 +1,107 @@
+name: finguard
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: finguard
+      MYSQL_USER: finguard_app
+      MYSQL_PASSWORD_FILE: /run/secrets/mysql_password
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
+    secrets:
+      - mysql_password
+      - mysql_root_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: ["--innodb-buffer-pool-size=128M"]
+    healthcheck:
+      test: ["CMD-SHELL", 'MYSQL_PWD="$$(cat /run/secrets/mysql_password)" mysql --protocol=TCP -h 127.0.0.1 -u "$$MYSQL_USER" "$$MYSQL_DATABASE" --execute="SELECT 1" --silent > /dev/null']
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+    restart: unless-stopped
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 768m
+
+  analytics:
+    build: ./ml-service
+    restart: unless-stopped
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 768m
+    pids_limit: 128
+
+  backend:
+    build: ./backend
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      DB_URL: jdbc:mysql://mysql:3306/finguard?connectionTimeZone=UTC&sslMode=DISABLED&allowPublicKeyRetrieval=true
+      DB_USERNAME: finguard_app
+      ML_BASE_URL: http://analytics:8000
+      ML_ENABLED: ${ML_ENABLED:-true}
+      ML_CONNECT_TIMEOUT_MS: ${ML_CONNECT_TIMEOUT_MS:-500}
+      ML_REQUEST_TIMEOUT_MS: ${ML_REQUEST_TIMEOUT_MS:-2000}
+      DEMO_ENABLED: ${DEMO_ENABLED:-false}
+      # The frontend uses same-origin /api. No extra cross-origin browser access is needed.
+      FRONTEND_ALLOWED_ORIGINS: ""
+    secrets:
+      - source: mysql_password
+        target: db.password
+    depends_on:
+      mysql: { condition: service_healthy }
+      # ML health does not gate ledger availability: rules remain a safe fallback.
+      analytics: { condition: service_started }
+    restart: unless-stopped
+    stop_grace_period: 45s
+    read_only: true
+    tmpfs: ["/tmp:size=64m,mode=1777"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 768m
+    pids_limit: 512
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: /api
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8088}:8080"
+    depends_on:
+      backend: { condition: service_healthy }
+    restart: unless-stopped
+    read_only: true
+    tmpfs: ["/tmp:size=32m,mode=1777"]
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 128m
+    pids_limit: 64
+
+  smoke:
+    image: python:3.14-slim-bookworm
+    profiles: ["tools"]
+    user: "10001:10001"
+    entrypoint: ["python", "/tools/smoke.py"]
+    command: ["--base-url", "http://frontend:8080", "--allow-writes"]
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - ./scripts:/tools:ro
+    depends_on:
+      frontend: { condition: service_healthy }
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 128m
+
+volumes:
+  mysql_data:
+
+secrets:
+  mysql_password:
+    file: ${MYSQL_PASSWORD_FILE:?Run python scripts/setup_env.py first}
+  mysql_root_password:
+    file: ${MYSQL_ROOT_PASSWORD_FILE:?Run python scripts/setup_env.py first}

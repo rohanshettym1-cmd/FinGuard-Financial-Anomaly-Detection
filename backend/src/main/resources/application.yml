@@ -35,3 +35,5 @@ ml:
   request-timeout-ms: ${ML_REQUEST_TIMEOUT_MS:1000}
 frontend:
   allowed-origins: ${FRONTEND_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+demo:
+  enabled: ${DEMO_ENABLED:false}

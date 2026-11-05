@@ -1,0 +1,10 @@
+# Whitelist only build inputs; local credentials and build outputs never enter the context.
+*
+!pom.xml
+!src/
+!src/**
+!Dockerfile
+**/.env*
+**/*.key
+**/*.pem
+**/*.dump

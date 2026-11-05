@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 
 const api = process.env.E2E_API_BASE_URL || 'http://localhost:8080/api';
 test.beforeAll(() => {
@@ -8,10 +9,10 @@ test.beforeAll(() => {
       'Set E2E_ALLOW_SYNTHETIC_WRITES=true only for an isolated synthetic database. These tests create records.',
     );
 });
-const screenDir = new URL('../../docs/screenshots/', import.meta.url).pathname.replace(
-  /^\/([A-Za-z]:)/,
-  '$1',
-);
+// Test captures stay ignored unless explicitly directed to a reviewed synthetic docs directory.
+const screenDir =
+  process.env.E2E_SCREENSHOT_DIR ||
+  fileURLToPath(new URL('../test-results/screenshots/', import.meta.url));
 test('creates customer/account, posts credit/debit, rejects overdraft, and persists an investigation', async ({
   page,
   request,
@@ -27,11 +28,9 @@ test('creates customer/account, posts credit/debit, rejects overdraft, and persi
   await page.getByRole('link', { name: 'Accounts', exact: true }).click();
   await page.getByRole('button', { name: 'Create account', exact: true }).click();
   const accountDialog = page.getByRole('dialog');
-  await accountDialog
-    .getByLabel('Customer', { exact: true })
-    .selectOption({
-      label: `${name} · #${(await request.get(`${api}/customers`).then((response) => response.json())).find((customer) => customer.name === name).id}`,
-    });
+  await accountDialog.getByLabel('Customer', { exact: true }).selectOption({
+    label: `${name} · #${(await request.get(`${api}/customers`).then((response) => response.json())).find((customer) => customer.name === name).id}`,
+  });
   const accountResponse = page.waitForResponse(
     (response) =>
       response.url().endsWith('/api/accounts') && response.request().method() === 'POST',

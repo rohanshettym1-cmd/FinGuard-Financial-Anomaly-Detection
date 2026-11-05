@@ -32,3 +32,7 @@ Thumbs.db
 *.parquet
 **/test-results/
 **/playwright-report/
+.secrets/
+**/mysql-data/
+**/*.db
+**/*.sqlite*

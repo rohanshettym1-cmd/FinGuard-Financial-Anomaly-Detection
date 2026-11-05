@@ -76,3 +76,10 @@ CREATE TABLE alert_reviews (
 -- Existing Milestone 2 transactions are queued without modifying ledger balances.
 INSERT INTO detection_jobs (transaction_id, completed, created_at)
 SELECT id, FALSE, CURRENT_TIMESTAMP(6) FROM financial_transactions;
+
+-- Metadata only: no demo ledger data is inserted by migrations.
+CREATE TABLE demo_seed_runs (
+    seed_key VARCHAR(64) NOT NULL PRIMARY KEY,
+    completed BOOLEAN NOT NULL DEFAULT FALSE
+) ENGINE=InnoDB;
+INSERT INTO demo_seed_runs (seed_key, completed) VALUES ('portfolio-v1', FALSE);

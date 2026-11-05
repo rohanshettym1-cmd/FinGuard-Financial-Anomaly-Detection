@@ -31,7 +31,8 @@ npm run build
 `dist/` is generated and ignored. Charts load in a separate chunk. `npm run preview`
 serves the built frontend at `http://127.0.0.1:4173`; explicitly add that exact origin
 to backend `FRONTEND_ALLOWED_ORIGINS` before using preview. This is local verification,
-not deployment. No hosting or publication is configured.
+not deployment. Compose can instead serve this build behind Nginx with same-origin
+`/api`; see the root README. No public hosting or publication is configured.
 
 ## Screens and architecture
 
@@ -123,4 +124,6 @@ history and failed review behavior. Playwright checks the real browser-to-Spring
 API contract and CORS, credit/debit/overdraft behavior, persisted analyst review,
 error/retry recovery, charts, 1440px desktop and 390px mobile layouts, keyboard focus,
 and synthetic-only screenshots. Browser traces/results, dependencies and build
-outputs remain ignored. See [screenshots](../docs/screenshots) and the root README.
+outputs remain ignored. Browser captures default to ignored `test-results/screenshots`.
+Set `E2E_SCREENSHOT_DIR` explicitly only when refreshing reviewed synthetic documentation
+images. See [screenshots](../docs/screenshots) and the root README.

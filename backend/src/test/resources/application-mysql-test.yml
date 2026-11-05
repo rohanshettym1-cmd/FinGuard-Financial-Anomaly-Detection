@@ -9,3 +9,5 @@ detection:
   enabled: false
 ml:
   enabled: false
+demo:
+  enabled: false
