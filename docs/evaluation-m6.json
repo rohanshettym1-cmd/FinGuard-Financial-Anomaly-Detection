@@ -1,0 +1,192 @@
+{
+  "seed": 42,
+  "rows": 6626,
+  "train_rows": 3975,
+  "validation_rows": 1325,
+  "test_rows": 1326,
+  "test_start_inclusive_utc": "2026-03-13 06:22:11+00:00",
+  "train_end_exclusive_utc": "2026-02-23 22:28:03+00:00",
+  "test_positive_labels": 123,
+  "data_sha256": "d40447972e0f156a0d78fe4463df1fe77c65d6a6c7fd89028aded9d2585e5723",
+  "model_version": "iforest-context-v2-seed42-35ac323026fc",
+  "sklearn_version": "1.9.1",
+  "generator_version": "mixed-context-v2",
+  "selection": {
+    "max_samples": 256,
+    "training_quantile": 0.995,
+    "threshold": 0.6736557372444134,
+    "validation_hybrid_f1": 0.88,
+    "validation_hybrid_fpr": 0.006013745704467354,
+    "tp": 132,
+    "fp": 7,
+    "tn": 1157,
+    "fn": 29
+  },
+  "validation_candidates": [
+    {
+      "max_samples": 256,
+      "training_quantile": 0.9,
+      "threshold": 0.5554530085207424,
+      "validation_hybrid_f1": 0.726775956284153,
+      "validation_hybrid_fpr": 0.061855670103092786,
+      "tp": 133,
+      "fp": 72,
+      "tn": 1092,
+      "fn": 28
+    },
+    {
+      "max_samples": 256,
+      "training_quantile": 0.95,
+      "threshold": 0.588414537354864,
+      "validation_hybrid_f1": 0.8275862068965517,
+      "validation_hybrid_fpr": 0.022336769759450172,
+      "tp": 132,
+      "fp": 26,
+      "tn": 1138,
+      "fn": 29
+    },
+    {
+      "max_samples": 256,
+      "training_quantile": 0.975,
+      "threshold": 0.6161661179743532,
+      "validation_hybrid_f1": 0.88,
+      "validation_hybrid_fpr": 0.006013745704467354,
+      "tp": 132,
+      "fp": 7,
+      "tn": 1157,
+      "fn": 29
+    },
+    {
+      "max_samples": 256,
+      "training_quantile": 0.99,
+      "threshold": 0.6424985090263522,
+      "validation_hybrid_f1": 0.88,
+      "validation_hybrid_fpr": 0.006013745704467354,
+      "tp": 132,
+      "fp": 7,
+      "tn": 1157,
+      "fn": 29
+    },
+    {
+      "max_samples": 256,
+      "training_quantile": 0.995,
+      "threshold": 0.6736557372444134,
+      "validation_hybrid_f1": 0.88,
+      "validation_hybrid_fpr": 0.006013745704467354,
+      "tp": 132,
+      "fp": 7,
+      "tn": 1157,
+      "fn": 29
+    },
+    {
+      "max_samples": 512,
+      "training_quantile": 0.9,
+      "threshold": 0.5490519213959256,
+      "validation_hybrid_f1": 0.7327823691460055,
+      "validation_hybrid_fpr": 0.059278350515463915,
+      "tp": 133,
+      "fp": 69,
+      "tn": 1095,
+      "fn": 28
+    },
+    {
+      "max_samples": 512,
+      "training_quantile": 0.95,
+      "threshold": 0.5858815030583724,
+      "validation_hybrid_f1": 0.8407643312101911,
+      "validation_hybrid_fpr": 0.01804123711340206,
+      "tp": 132,
+      "fp": 21,
+      "tn": 1143,
+      "fn": 29
+    },
+    {
+      "max_samples": 512,
+      "training_quantile": 0.975,
+      "threshold": 0.614963436026907,
+      "validation_hybrid_f1": 0.88,
+      "validation_hybrid_fpr": 0.006013745704467354,
+      "tp": 132,
+      "fp": 7,
+      "tn": 1157,
+      "fn": 29
+    },
+    {
+      "max_samples": 512,
+      "training_quantile": 0.99,
+      "threshold": 0.647334786969604,
+      "validation_hybrid_f1": 0.88,
+      "validation_hybrid_fpr": 0.006013745704467354,
+      "tp": 132,
+      "fp": 7,
+      "tn": 1157,
+      "fn": 29
+    },
+    {
+      "max_samples": 512,
+      "training_quantile": 0.995,
+      "threshold": 0.6726177891881847,
+      "validation_hybrid_f1": 0.88,
+      "validation_hybrid_fpr": 0.006013745704467354,
+      "tp": 132,
+      "fp": 7,
+      "tn": 1157,
+      "fn": 29
+    }
+  ],
+  "threshold_source": "chronological validation hybrid F1; test labels excluded from selection",
+  "isolation_forest": {
+    "precision": 1.0,
+    "recall": 0.04065040650406504,
+    "f1": 0.078125,
+    "false_positive_rate": 0.0,
+    "tp": 5,
+    "fp": 0,
+    "tn": 1203,
+    "fn": 118
+  },
+  "rules": {
+    "precision": 0.8888888888888888,
+    "recall": 0.7804878048780488,
+    "f1": 0.8311688311688312,
+    "false_positive_rate": 0.00997506234413965,
+    "tp": 96,
+    "fp": 12,
+    "tn": 1191,
+    "fn": 27
+  },
+  "hybrid": {
+    "precision": 0.8888888888888888,
+    "recall": 0.7804878048780488,
+    "f1": 0.8311688311688312,
+    "false_positive_rate": 0.00997506234413965,
+    "tp": 96,
+    "fp": 12,
+    "tn": 1191,
+    "fn": 27
+  },
+  "limitations": "Synthetic injection labels are not real fraud. Fixed generator patterns and prevalence do not represent production. Baselines update causally from earlier test events as online history; model weights and threshold remain frozen. Scores are priorities, not fraud probabilities.",
+  "frozen_legacy_model_on_same_test": {
+    "model_version": "iforest-finguard-causal-v1-seed42-50172d02871c",
+    "isolation_forest": {
+      "precision": 0.18036072144288579,
+      "recall": 0.7317073170731707,
+      "f1": 0.28938906752411575,
+      "false_positive_rate": 0.3399833748960931,
+      "tp": 90,
+      "fp": 409,
+      "tn": 794,
+      "fn": 33
+    },
+    "hybrid": {
+      "precision": 0.201171875,
+      "recall": 0.8373983739837398,
+      "f1": 0.32440944881889766,
+      "false_positive_rate": 0.3399833748960931,
+      "tp": 103,
+      "fp": 409,
+      "tn": 794,
+      "fn": 20
+    }
+  }
+}

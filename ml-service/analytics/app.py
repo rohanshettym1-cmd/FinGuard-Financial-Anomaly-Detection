@@ -61,10 +61,20 @@ def create_app(model_path: Path | None = None) -> FastAPI:
         if app.state.bundle is None:
             raise HTTPException(503, "Train a compatible model before serving predictions")
         features = matrix(pd.DataFrame([request.model_dump()]))
-        _, ranks, flags = predict(app.state.bundle, features)
+        raw, ranks, flags = predict(app.state.bundle, features)
+        history = (f"historical debit mean {request.baseline_mean} from {request.prior_debit_count} prior debits"
+                   if request.prior_debit_count >= 5 and request.baseline_mean > 0
+                   else "insufficient debit history; spending-deviation feature is neutral")
+        if not request.is_debit:
+            history = "credit transaction; spending-deviation feature is neutral"
+        detail = (f"Isolation Forest raw score {raw[0]:.6f} "
+                  f"{'exceeds' if flags[0] else 'does not exceed'} cutoff {app.state.bundle['threshold']:.6f}. "
+                  f"Context: amount {request.amount}, UTC hour {request.hour}, "
+                  f"{request.frequency_5m} account transactions in five minutes; {history}. "
+                  "Training-score percentile is not a fraud probability; context is not causal feature attribution.")
         return PredictionResponse(risk_score=int(ranks[0]), anomalous=bool(flags[0]),
                                   model_version=app.state.bundle["model_version"],
-                                  explanation="Empirical training-score percentile for an Isolation Forest feature combination; not a fraud probability or causal feature attribution.")
+                                  explanation=detail)
     return app
 
 

@@ -36,6 +36,24 @@ class MlClientTest {
             assertThat(result.status()).isEqualTo("AVAILABLE");
             assertThat(result.score()).isEqualTo(98);
             assertThat(result.anomalous()).isTrue();
+            assertThat(result.explanation()).contains("model threshold"); // Older Python responses stay compatible.
+        } finally { server.stop(0); }
+    }
+
+    @Test
+    void modelExplanationIsRetainedAsOneBoundedLine() throws Exception {
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/predict", exchange -> {
+            var body = new ObjectMapper().writeValueAsBytes(java.util.Map.of("risk_score", 99,
+                    "anomalous", true, "model_version", "v2", "explanation", "Context:\n" + "x".repeat(1200)));
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body); exchange.close();
+        });
+        server.start();
+        try {
+            var result = client(server, 1000).predict(features);
+            assertThat(result.status()).isEqualTo("AVAILABLE");
+            assertThat(result.explanation()).startsWith("Context: ").hasSize(1000).doesNotContain("\n");
         } finally { server.stop(0); }
     }
 

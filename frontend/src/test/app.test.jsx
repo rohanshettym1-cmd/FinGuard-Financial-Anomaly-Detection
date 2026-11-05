@@ -59,7 +59,8 @@ describe('dashboard API integration states', () => {
   it('renders totals from account transaction pages and navigates to real customer data', async () => {
     mockApi();
     render(<App />);
-    expect(await screen.findByText('Total transactions')).toBeVisible();
+    // The first overview render loads a lazy module; allow cold Windows CI imports to finish.
+    expect(await screen.findByText('Total transactions', {}, { timeout: 5000 })).toBeVisible();
     expect(screen.getAllByText('₹100.10').length).toBeGreaterThan(0);
     expect(screen.getByText('API connected')).toBeVisible();
     await userEvent.click(screen.getAllByRole('link', { name: 'Customers' })[0]);

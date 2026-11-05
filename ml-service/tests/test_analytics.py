@@ -91,6 +91,9 @@ def test_predict_and_health(trained):
         assert unusual.json()["anomalous"] is True
         assert unusual.json()["risk_score"] >= normal.json()["risk_score"]
         assert "not a fraud probability" in unusual.json()["explanation"]
+        assert "cutoff" in unusual.json()["explanation"]
+        cold_start = client.post("/predict", json=payload(prior_debit_count=0, baseline_mean="0"))
+        assert "spending-deviation feature is neutral" in cold_start.json()["explanation"]
 
 
 @pytest.mark.parametrize("changes", [

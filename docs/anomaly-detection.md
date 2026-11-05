@@ -131,3 +131,11 @@ Analyst names are self-declared in this local-development API. Authentication,
 ownership authorization, idempotency keys, review role enforcement and regulatory
 fraud decisions remain outside this milestone. Neither alerts nor confirmations
 automatically block, reverse or change transactions. No React work is included.
+
+## Milestone 6 update
+
+The architecture, rules and hybrid formula above remain unchanged. Current training
+uses chronological train/validation/test threshold selection and the broader
+mixed-context-v2 generator. The 75% training/5% contamination report above is the
+preserved Milestone 3 experiment. See [current investigation and evaluation](ml-optimization.md)
+for the new policy, same-test comparison, recall tradeoff and rollout behavior.

@@ -11,7 +11,11 @@ import java.util.concurrent.TimeUnit;
 
 @Component
 public class MlClient {
-    public record Prediction(String status, Integer score, boolean anomalous, String modelVersion) { }
+    public record Prediction(String status, Integer score, boolean anomalous, String modelVersion, String explanation) {
+        public Prediction(String status, Integer score, boolean anomalous, String modelVersion) {
+            this(status, score, anomalous, modelVersion, "Feature combination exceeded the model threshold");
+        }
+    }
     private final ObjectMapper json;
     private final boolean enabled;
     private final URI endpoint;
@@ -53,7 +57,11 @@ public class MlClient {
             if (!risk.isIntegralNumber() || !risk.canConvertToInt() || risk.intValue() < 0 || risk.intValue() > 100
                     || !flag.isBoolean() || !version.isTextual() || version.asText().isBlank()
                     || version.asText().length() > 100) { return fallback(); }
-            return new Prediction("AVAILABLE", risk.intValue(), flag.booleanValue(), version.asText());
+            var explanation = body.path("explanation");
+            String detail = explanation.isTextual() ? explanation.asText().replaceAll("\\s+", " ").trim()
+                    : "Feature combination exceeded the model threshold";
+            if (detail.length() > 1000) { detail = detail.substring(0, 1000); }
+            return new Prediction("AVAILABLE", risk.intValue(), flag.booleanValue(), version.asText(), detail);
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             return fallback();

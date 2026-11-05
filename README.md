@@ -254,3 +254,19 @@ configured GitHub token previously lacked workflow scope. All checks are locally
 [Project explanation and interview talking points](docs/portfolio.md) ·
 [Mobile screenshot](docs/screenshots/overview-mobile.png) ·
 [Analyst investigation screenshot](docs/screenshots/investigation.png)
+
+## Milestone 6: investigated alert sensitivity
+
+The 35/36 demo alert count reflects both intentionally suspicious rapid seed data
+and a narrow original ML training distribution. The updated model uses broader
+synthetic normal contexts and chronological train/validation/test threshold selection.
+On the same new held-out test, hybrid precision/recall/F1/FPR changed from
+20.12%/83.74%/32.44%/34.00% (frozen legacy model) to
+88.89%/78.05%/83.12%/1.00%. This sacrifices recall; ML added no detections beyond
+rules on this test. These are synthetic evaluation results, not real fraud claims.
+
+See [investigation, reproducible commands and limitations](docs/ml-optimization.md)
+and [exact new evaluation](docs/evaluation-m6.json). The table above is the preserved
+Milestone 3 benchmark on its original dataset, not the new model's evaluation.
+Historical alerts/reviews remain unchanged; the dashboard's historical alert rate
+will therefore not reset when the model changes. Risk scores are not probabilities.

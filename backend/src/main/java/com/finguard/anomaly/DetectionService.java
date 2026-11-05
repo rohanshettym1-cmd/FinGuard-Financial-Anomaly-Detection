@@ -37,7 +37,7 @@ public class DetectionService {
         int mlContribution = prediction.anomalous() ? Math.max(40, prediction.score()) : 0;
         if (prediction.anomalous()) {
             reasons.add("ML_ISOLATION_FOREST: unusual feature combination; training-score percentile "
-                    + prediction.score() + " (not a fraud probability)");
+                    + prediction.score() + " (not a fraud probability). " + prediction.explanation());
         }
         if (!prediction.status().equals("AVAILABLE")) {
             reasons.add("RULE_ONLY: ML " + prediction.status() + "; retained all rule checks");

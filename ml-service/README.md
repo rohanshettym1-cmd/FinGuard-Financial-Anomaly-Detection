@@ -28,3 +28,13 @@ The Docker build uses `requirements-runtime.txt` for serving/training dependenci
 runs the full tests in a separate verification stage, and trains a Linux-native model.
 It copies neither local serialized artifacts nor generated CSVs into the runtime.
 See the root README for Compose setup and its current verification limitation.
+
+Milestone 6 training now uses a versioned broader-context generator and chronological
+60/20/20 train/validation/test split. Threshold selection uses validation hybrid F1;
+the final test is held out. See [current evaluation and tradeoffs](../docs/ml-optimization.md)
+and [exact report](../docs/evaluation-m6.json). The earlier evaluation above is historical.
+To reproduce the same-test legacy comparison after training, run:
+
+```powershell
+python -m analytics.compare --candidate artifacts --output ../docs/evaluation-m6.json
+```
