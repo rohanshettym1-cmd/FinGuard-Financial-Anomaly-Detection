@@ -4,8 +4,10 @@ A full-stack transaction monitoring workspace built with Java, Python and React.
 FinGuard posts a consistent financial ledger, detects unusual activity with explainable
 rules and Isolation Forest, and gives analysts an evidence-based investigation workflow.
 
-**Milestone 5:** local container orchestration, safe demo initialization, smoke tests,
-and portfolio documentation. No public deployment or cloud resources are configured.
+**Current status — Milestone 6:** anomaly sensitivity investigated, broader synthetic
+training data and chronological validation introduced, and native full-stack behavior
+verified. This is a local educational/portfolio application; no public deployment
+or cloud resources are configured.
 
 ![FinGuard monitoring dashboard — synthetic data only](docs/screenshots/overview-desktop.png)
 
@@ -22,6 +24,37 @@ and portfolio documentation. No public deployment or cloud resources are configu
 Scores prioritize investigation on a 0–100 scale. **They are not calibrated fraud
 probabilities.** Alerts do not automatically block or reverse valid transactions.
 
+## Current model evaluation — Milestone 6
+
+Reproducible synthetic evaluation, seed 42: **6,626 events**, split chronologically
+into **3,975 training / 1,325 validation / 1,326 test** events. The test contains
+123 labeled injections and 1,203 labeled benign events. Model fitting is unsupervised;
+synthetic validation labels select the hybrid threshold policy. Test labels are
+excluded from selection. Historical features use only earlier events.
+
+| Detector on the same new held-out test | Precision | Recall | F1 | False-positive rate |
+| --- | --- | --- | --- | --- |
+| Frozen legacy hybrid | 20.12% | 83.74% | 32.44% | 34.00% |
+| Current rules | 88.89% | 78.05% | 83.12% | 1.00% |
+| Current Isolation Forest alone | 100.00% | 4.07% | 7.81% | 0.00% |
+| Current hybrid | 88.89% | 78.05% | 83.12% | 1.00% |
+
+The current hybrid has TP 96, FP 12, TN 1,191 and FN 27. Compared with the frozen
+legacy hybrid, false positives decreased from 409 to 12, but seven additional
+injections were missed. **ML added no detections beyond rules on this test**: its
+five true positives were also caught by rules. These results describe synthetic
+injections, not real fraud accuracy, and do not establish hybrid superiority.
+
+The earlier 35/36 demo alert count reflected both deliberately rapid/duplicate seed
+activity and a narrow original training distribution. Existing assessments and
+investigation reviews are preserved; changing the model does not reset historical
+alert rates. Risk scores remain investigation priorities, not fraud probabilities.
+
+See [exact metrics and provenance](docs/evaluation-m6.json),
+[investigation, reproduction commands and limitations](docs/ml-optimization.md),
+and [interview talking points](docs/portfolio.md). The original Milestone 3 benchmark
+is retained below under its own heading and uses a different dataset.
+
 ## Technology
 
 | Layer | Stack |
@@ -33,7 +66,37 @@ probabilities.** Alerts do not automatically block or reverse valid transactions
 | Local packaging | Multi-stage Docker builds, Nginx reverse proxy, Docker Compose |
 | Verification | JUnit/Spring tests, pytest, Vitest/Testing Library, Playwright, smoke checks |
 
-## Run the complete local stack
+## Choose a local setup
+
+| Setup | Dashboard | Verification status |
+| --- | --- | --- |
+| Native development: MySQL + Spring Boot + FastAPI + Vite | `http://127.0.0.1:5173` | Native services, full-stack smoke checks and browser flows verified |
+| Docker Compose: MySQL + Spring Boot + FastAPI + Nginx frontend | `http://localhost:8088` | Configuration/static checks completed; Docker execution not verified |
+
+### Native development (verified path)
+
+Use Java 21, MySQL 8.4, Python 3.14 and Node.js 22.12+. Follow the
+[native setup guide](docs/native-setup.md), [analytics guide](ml-service/README.md)
+and [frontend guide](frontend/README.md):
+
+1. Configure a local MySQL database and private environment credentials. Let Flyway
+   apply migrations; do not import the reference schema into an initialized database.
+2. Install the pinned Python dependencies, train the trusted local model with
+   `python -m analytics.train --seed 42 --output artifacts` from `ml-service`, and
+   start FastAPI on loopback port 8000.
+3. Start Spring Boot with the documented `DB_*` and `ML_BASE_URL` configuration on
+   port 8080; confirm `/api/health` returns `UP`.
+4. In `frontend`, run `npm ci`, configure `VITE_API_BASE_URL` for
+   `http://127.0.0.1:8080/api`, then run `npm run dev`. Match the allowed local CORS
+   origin to the frontend URL.
+5. Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Stop foreground servers with
+   Ctrl+C and stop MySQL using its normal service controls. Keep database storage
+   and private configuration for the next session.
+
+Native MySQL ports can be configured through `DB_URL`. Do not run write tests or
+reset commands against an existing manual-demo database.
+
+### Docker Compose (configured, execution not verified)
 
 Prerequisites: Docker Engine/Desktop with Compose v2 (Linux containers), plus Python
 3.10+ for the small environment-setup helper. Python 3.14 is used for native ML work.
@@ -80,12 +143,13 @@ flowchart LR
   Browser[React dashboard] -->|localhost:8088| Web[Nginx frontend]
   Web -->|/api/| Java[Spring Boot]
   Web -->|/analytics/health only| ML[FastAPI]
-  Java --> DB[(MySQL persistent volume)]
-  Java -->|pending detection jobs| Worker[Background detector]
+  Java -->|atomic balance, ledger and job writes; review API| DB[(MySQL: ledger, jobs, assessments, reviews)]
+  DB -->|pending jobs| Worker[Java background worker]
   Worker --> Rules[Java rules and historical baseline]
   Worker -->|Docker service analytics:8000| ML
-  Rules --> Evidence[(Assessments and review audit)]
-  ML --> Evidence
+  Rules -->|rule result| Detection[Java detection service]
+  ML -->|prediction result| Detection
+  Detection -->|assessment and job completion| DB
 ```
 
 Posting commits the balance, ledger entry and pending job in one database transaction.
@@ -93,13 +157,13 @@ Background detection runs separately and never edits balances. ML failure produc
 an explicit rule-only assessment; database/worker failures leave a pending job for
 retry. Historical features exclude the current/future transaction and other customers.
 
-The browser uses relative `/api`; Nginx forwards it to `backend:8080`, while Java calls
-`analytics:8000`. Browsers never need to resolve Docker-only service names. MySQL is
+In the configured Compose setup, the browser uses relative `/api`; Nginx forwards
+it to `backend:8080`, while Java calls `analytics:8000`. Browsers never need to resolve Docker-only service names. MySQL is
 health-gated before backend startup; ML health does not block ledger availability.
 The frontend starts after backend health. Health checks distinguish web serving,
 backend process health and model readiness; they do not replace full smoke tests.
 
-## Lifecycle and smoke tests
+## Compose lifecycle and smoke tests
 
 ```powershell
 # Status and logs
@@ -183,9 +247,11 @@ Use the [existing Postman collection](docs/FinGuard.postman_collection.json),
 [detailed native/API guide](docs/native-setup.md), and [frontend guide](frontend/README.md)
 for additional endpoints, validation, local Vite configuration and examples.
 
-## Model evaluation
+## Historical Milestone 3 benchmark
 
-Chronological held-out synthetic evaluation, seed 42: 5,701 events; 4,275 training /
+This preserved earlier experiment uses a different dataset from Milestone 6; its
+metrics are not the current model evaluation. Chronological synthetic evaluation,
+seed 42: 5,701 events; 4,275 training /
 1,426 test events, including 146 injected positives. Model weights, rank reference
 and threshold use training data only. Earlier test events may update later historical
 features as in online scoring; labels never enter model fitting.
@@ -203,6 +269,26 @@ See [exact metrics/provenance](docs/evaluation.json) and [ML design/limitations]
 
 ## Verification and portfolio notes
 
+Recorded Milestone 6 verification on **2026-11-05** (not a hosted CI run):
+
+| Check | Recorded result |
+| --- | --- |
+| Java / H2 | 53 tests passed; Maven build passed |
+| Java / disposable MySQL configuration | 53 tests passed; same suite, with the seed testcase deliberately isolated on H2 |
+| Python | 23 tests passed |
+| React components/API integration | 25 tests passed; production build passed |
+| Local tooling | 8 tests passed |
+| Playwright browser flows | 4 tests passed |
+| Native full-stack smoke checks | Health, posting, overdraft rejection, balances, alerts and review persistence passed |
+| Docker images / Compose execution | Not run: Docker unavailable in the authoring environment |
+
+These are recorded local results, not a coverage percentage or a performance benchmark.
+The Java counts represent two configurations of the same suite, not 106 distinct tests.
+The [Milestone 6 verification notes](docs/ml-optimization.md#verification-on-windows)
+record the test boundaries and remaining upstream test-client warning.
+
+Re-run the applicable checks in your own environment:
+
 ```powershell
 cd backend
 .\mvnw.cmd clean verify
@@ -218,14 +304,42 @@ python -m unittest discover -s scripts/tests -v
 
 For the opt-in disposable MySQL suite and full-stack Playwright tests, follow the
 [native guide](docs/native-setup.md) and [frontend testing guide](frontend/README.md).
-Container builds run the existing language-specific tests before copying runtime
-artifacts. Runtime images omit Maven, Node build tooling, Python test tooling and
-training CSVs. Java, Python and Nginx runtime processes are non-root, with read-only
-filesystems, temporary writable scratch space and dropped capabilities in Compose.
+Dockerfiles are configured to run the language-specific tests before copying runtime
+artifacts; those container stages have not been executed in the authoring environment.
+The runtime stages are configured to omit Maven, Node build tooling, Python test
+tooling and training CSVs. Java, Python and Nginx are configured to run as non-root,
+with read-only filesystems, writable scratch space and dropped capabilities in Compose.
 
 The current native verification results and the explicit Docker limitation are in
 [docs/local-stack.md](docs/local-stack.md). CI configuration has not been added: the
 configured GitHub token previously lacked workflow scope. All checks are locally runnable.
+
+## Five-minute portfolio demonstration
+
+Use a fresh synthetic customer and ACTIVE account to avoid existing burst history.
+This sequence is a demonstration, not a substitute for the evaluation dataset.
+
+1. Show the dashboard, customer/account creation and API-backed transaction history.
+2. Post a 5,000.00 credit and a 125.50 debit. Inspect each completed assessment;
+   detection can initially be pending. Normal transactions need not open alerts.
+3. Post two 50,000.00 credits within 60 seconds. The first triggers LARGE_AMOUNT
+   (+45); the second also triggers POSSIBLE_DUPLICATE (+45). ML can raise the final
+   risk; exact scores depend on UTC hour and transaction history.
+4. Verify the final balance is 104,874.50. Attempt a 200,000.00 debit and show that
+   rejection leaves both balance and ledger unchanged.
+5. Inspect the new alert explanations and model version. Review only a new synthetic
+   alert if demonstrating review writes; leave existing historical investigations alone.
+6. Explain that the current held-out hybrid matched rules, sacrificed recall versus
+   the legacy hybrid, and cannot establish real fraud performance.
+
+In the **2026-11-06 native manual verification**, this fresh-account sequence produced
+risks **0, 0, 45 and 90**, the expected final balance, and an insufficient-funds rejection.
+Before/after fingerprints verified all 36 previous assessments and both existing review
+entries unchanged. These are observed synthetic demo results, not universal score guarantees.
+
+Development used AI-assisted implementation and testing. The
+[portfolio guide](docs/portfolio.md) distinguishes repository capabilities from personal
+contribution claims and lists code paths to explain in an interview.
 
 ## Scope and limitations
 
@@ -254,19 +368,3 @@ configured GitHub token previously lacked workflow scope. All checks are locally
 [Project explanation and interview talking points](docs/portfolio.md) ·
 [Mobile screenshot](docs/screenshots/overview-mobile.png) ·
 [Analyst investigation screenshot](docs/screenshots/investigation.png)
-
-## Milestone 6: investigated alert sensitivity
-
-The 35/36 demo alert count reflects both intentionally suspicious rapid seed data
-and a narrow original ML training distribution. The updated model uses broader
-synthetic normal contexts and chronological train/validation/test threshold selection.
-On the same new held-out test, hybrid precision/recall/F1/FPR changed from
-20.12%/83.74%/32.44%/34.00% (frozen legacy model) to
-88.89%/78.05%/83.12%/1.00%. This sacrifices recall; ML added no detections beyond
-rules on this test. These are synthetic evaluation results, not real fraud claims.
-
-See [investigation, reproducible commands and limitations](docs/ml-optimization.md)
-and [exact new evaluation](docs/evaluation-m6.json). The table above is the preserved
-Milestone 3 benchmark on its original dataset, not the new model's evaluation.
-Historical alerts/reviews remain unchanged; the dashboard's historical alert rate
-will therefore not reset when the model changes. Risk scores are not probabilities.
